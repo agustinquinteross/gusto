@@ -16,10 +16,15 @@ const greatVibes = Great_Vibes({
 });
 
 export const metadata = {
-  title: 'Gustó',
-  description: 'Las mejores hamburguesas de Catamarca. Pedí online y recibí en tu casa.',
+  title: 'Gustó - Donde nace el sabor',
+  description: 'Pedí online y disfrutá del mejor sabor de Catamarca. Delivery rápido y retiro en local.',
   icons: {
     icon: '/logo.png'
+  },
+  openGraph: {
+    title: 'Gustó - Donde nace el sabor',
+    description: 'Pedí online y disfrutá del mejor sabor de Catamarca. Delivery rápido y retiro en local.',
+    images: ['/logo.png'],
   },
 }
 
