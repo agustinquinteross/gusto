@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { compressImage } from '../lib/compressImage'
 import { X, Save, Upload, Loader2, Layers, Image as ImageIcon, Zap, Gift, Plus } from 'lucide-react'
 
 export default function AdminProductForm({ productToEdit, onCancel, onSaved }) {
@@ -62,8 +63,10 @@ export default function AdminProductForm({ productToEdit, onCancel, onSaved }) {
       setUploading(true)
       const file = e.target.files[0]
       if (!file) return
-      const fileName = `${Date.now()}.${file.name.split('.').pop()}`
-      const { error: uploadError } = await supabase.storage.from('menu-images').upload(fileName, file)
+      // ✅ Comprimir imagen: max 800px, calidad 80%
+      const compressed = await compressImage(file, { maxWidth: 800, maxHeight: 800, quality: 0.8 })
+      const fileName = `${Date.now()}.jpg`
+      const { error: uploadError } = await supabase.storage.from('menu-images').upload(fileName, compressed, { contentType: 'image/jpeg' })
       if (uploadError) throw uploadError
       const { data } = supabase.storage.from('menu-images').getPublicUrl(fileName)
       if (imageUrl) setImageToDelete(imageUrl)

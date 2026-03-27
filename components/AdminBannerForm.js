@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { compressImage } from '../lib/compressImage'
 import { Save, X, Loader2, Image as ImageIcon } from 'lucide-react'
 
 export default function AdminBannerForm({ onCancel, onSaved }) {
@@ -15,13 +16,14 @@ export default function AdminBannerForm({ onCancel, onSaved }) {
       if (!e.target.files || e.target.files.length === 0) return
 
       const file = e.target.files[0]
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}.${fileExt}`
+      // ✅ Comprimir banner: max 1500px ancho, calidad 85%
+      const compressed = await compressImage(file, { maxWidth: 1500, maxHeight: 1000, quality: 0.85 })
+      const fileName = `${Date.now()}.jpg`
       const filePath = `${fileName}`
 
       const { error: uploadError } = await supabase.storage
         .from('banners')
-        .upload(filePath, file)
+        .upload(filePath, compressed, { contentType: 'image/jpeg' })
 
       if (uploadError) throw uploadError
 

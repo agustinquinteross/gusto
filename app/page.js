@@ -246,7 +246,7 @@ export default function Home() {
           <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#4A3B32]" size={40} /></div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredProducts.map(product => (
                 <div key={product.id} onClick={() => product.stock !== 0 && setSelectedProduct(product)} className={`bg-white border border-[#4A3B32]/10 rounded-2xl overflow-hidden transition-all group relative ${product.stock === 0 ? 'opacity-75 cursor-not-allowed grayscale-[0.2]' : 'hover:border-[#4A3B32]/30 cursor-pointer shadow-sm hover:shadow-md'}`}>
 
@@ -288,7 +288,7 @@ export default function Home() {
                     })}
                   </div>
 
-                  <div className="aspect-[4/3] overflow-hidden relative">
+                  <div className="aspect-[16/9] overflow-hidden relative">
                     {product.image_url ? (
                       <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
