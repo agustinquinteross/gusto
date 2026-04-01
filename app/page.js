@@ -59,6 +59,7 @@ export default function Home() {
             special_offers (*),
             product_modifiers (
                 group_id,
+                position,
                 modifier_groups (
                     id, name, min_selection, max_selection, max_per_option,
                     modifier_options (id, name, price, is_available)
@@ -69,11 +70,14 @@ export default function Home() {
         .order('id')
 
       if (rawProducts) {
-        // Formateamos los datos
-        const formatted = rawProducts.map(p => ({
-          ...p,
-          modifiers: p.product_modifiers?.map(pm => pm.modifier_groups) || []
-        }))
+        // Formateamos los datos ordenando por 'position'
+        const formatted = rawProducts.map(p => {
+          const sortedModifiers = (p.product_modifiers || []).sort((a, b) => (a.position || 0) - (b.position || 0));
+          return {
+            ...p,
+            modifiers: sortedModifiers.map(pm => pm.modifier_groups).filter(Boolean)
+          };
+        });
         setProducts(formatted)
       }
     } catch (err) {
@@ -288,11 +292,11 @@ export default function Home() {
                     })}
                   </div>
 
-                  <div className="aspect-[16/9] overflow-hidden relative">
+                  <div className="overflow-hidden relative bg-white flex justify-center items-center">
                     {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img src={product.image_url} alt={product.name} className="w-full h-auto max-h-[300px] object-contain group-hover:scale-105 transition-transform duration-500" />
                     ) : (
-                      <div className="w-full h-full bg-[#4A3B32]/5 flex items-center justify-center text-4xl">🍔</div>
+                      <div className="w-full aspect-square bg-[#4A3B32]/5 flex items-center justify-center text-4xl">🍩</div>
                     )}
                     <div className="absolute bottom-2 right-2 bg-[#4A3B32]/90 backdrop-blur text-[#FAF7F2] px-3 py-1 rounded-lg font-bold border border-[#4A3B32]">${product.price}</div>
                   </div>

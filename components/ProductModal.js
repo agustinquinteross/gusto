@@ -162,11 +162,11 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
       <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-[#4A3B32]/10 text-[#4A3B32]/90">
 
         {/* Imagen Header */}
-        <div className="relative h-48 sm:h-56 bg-[#4A3B32]/5 shrink-0">
+        <div className="relative min-h-[200px] bg-[#4A3B32]/5 shrink-0 flex justify-center items-center">
           {product.image_url ? (
-            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+            <img src={product.image_url} alt={product.name} className="w-full h-auto max-h-[40vh] object-contain bg-white" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-[#4A3B32]/5 text-[#4A3B32]/50">🍔</div>
+            <div className="w-full min-h-[200px] flex items-center justify-center bg-[#4A3B32]/5 text-[#4A3B32]/50">🍩</div>
           )}
           <button
             type="button"
@@ -322,9 +322,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="w-full bg-white border border-[#4A3B32]/20 rounded-lg p-3 text-[#4A3B32] text-sm focus:border-yellow-500 outline-none placeholder-gray-600 resize-none transition-all focus:ring-1 focus:ring-yellow-500/50"
+              className="w-full bg-white border border-[#4A3B32]/20 rounded-lg p-3 text-[#4A3B32] text-sm focus:border-yellow-500 outline-none resize-none transition-all focus:ring-1 focus:ring-yellow-500/50"
               rows="2"
-              placeholder="Ej: Sin sal, la carne bien cocida, sin mayonesa..."
             />
           </div>
 

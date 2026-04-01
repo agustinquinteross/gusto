@@ -28,6 +28,9 @@ export default function AdminProductForm({ productToEdit, onCancel, onSaved }) {
   const [selectedModifiers, setSelectedModifiers] = useState([])
   const [availableOffers, setAvailableOffers] = useState([])
 
+  // Estado para DnD de Extras
+  const [draggedGroupIdx, setDraggedGroupIdx] = useState(null)
+
   useEffect(() => {
     const fetchData = async () => {
       const { data: cats } = await supabase.from('categories').select('*').order('id')
@@ -51,7 +54,8 @@ export default function AdminProductForm({ productToEdit, onCancel, onSaved }) {
             setPromoTags(productToEdit.promo_tag.split(',').map(tag => tag.trim()).filter(tag => tag !== ""))
         } else { setPromoTags([]) }
 
-        const { data: existingModifiers } = await supabase.from('product_modifiers').select('group_id').eq('product_id', productToEdit.id)
+        // Fetch de modificadores existentes ordenados
+        const { data: existingModifiers } = await supabase.from('product_modifiers').select('group_id, position').eq('product_id', productToEdit.id).order('position', { ascending: true })
         if (existingModifiers) setSelectedModifiers(existingModifiers.map(em => em.group_id))
       }
     }
@@ -63,7 +67,6 @@ export default function AdminProductForm({ productToEdit, onCancel, onSaved }) {
       setUploading(true)
       const file = e.target.files[0]
       if (!file) return
-      // ✅ Comprimir imagen: max 800px, calidad 80%
       const compressed = await compressImage(file, { maxWidth: 800, maxHeight: 800, quality: 0.8 })
       const fileName = `${Date.now()}.jpg`
       const { error: uploadError } = await supabase.storage.from('menu-images').upload(fileName, compressed, { contentType: 'image/jpeg' })
@@ -72,6 +75,26 @@ export default function AdminProductForm({ productToEdit, onCancel, onSaved }) {
       if (imageUrl) setImageToDelete(imageUrl)
       setImageUrl(data.publicUrl)
     } catch (error) { alert('Error imagen: ' + error.message) } finally { setUploading(false) }
+  }
+
+  // --- NATIVE DRAG & DROP PARA GRUPOS ---
+  const handleDragStartGroup = (e, index) => {
+    setDraggedGroupIdx(index)
+    e.dataTransfer.effectAllowed = "move"
+    setTimeout(() => { if(e.target) e.target.classList.add('opacity-50') }, 0)
+  }
+  const handleDragEndGroup = (e) => {
+    if(e.target) e.target.classList.remove('opacity-50')
+    setDraggedGroupIdx(null)
+  }
+  const handleDragOverGroup = (e) => e.preventDefault()
+  const handleDropGroup = (e, dropIndex) => {
+    e.preventDefault()
+    if (draggedGroupIdx === null || draggedGroupIdx === dropIndex) return
+    const newItems = [...selectedModifiers]
+    const draggedItem = newItems.splice(draggedGroupIdx, 1)[0]
+    newItems.splice(dropIndex, 0, draggedItem)
+    setSelectedModifiers(newItems)
   }
 
   const handleSave = async () => {
@@ -94,10 +117,11 @@ export default function AdminProductForm({ productToEdit, onCancel, onSaved }) {
         productId = data[0].id
       }
 
+      // Reasignación de Extras con Posición
       if (productId) {
           await supabase.from('product_modifiers').delete().eq('product_id', productId)
           if (selectedModifiers.length > 0) {
-            await supabase.from('product_modifiers').insert(selectedModifiers.map(groupId => ({ product_id: productId, group_id: groupId })))
+            await supabase.from('product_modifiers').insert(selectedModifiers.map((groupId, idx) => ({ product_id: productId, group_id: groupId, position: idx })))
           }
       }
 
@@ -157,7 +181,40 @@ export default function AdminProductForm({ productToEdit, onCancel, onSaved }) {
                     </div>
                     <div className="space-y-1"><label className="text-xs font-bold text-[#4A3B32]/70 uppercase tracking-widest">Categoría</label><select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full bg-[#FAF7F2] border border-[#4A3B32]/20 rounded-lg p-3 text-[#4A3B32] outline-none focus:border-red-600 text-xs font-bold">{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
                     <div className="space-y-1"><label className="text-xs font-bold text-[#4A3B32]/70 uppercase tracking-widest">Descripción</label><textarea rows="3" value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-[#FAF7F2] border border-[#4A3B32]/20 rounded-lg p-3 text-[#4A3B32] outline-none focus:border-red-600 text-xs resize-none" /></div>
-                    <div className="space-y-2 pt-2 border-t border-[#4A3B32]/10"><label className="text-xs font-bold text-blue-400 uppercase flex items-center gap-2 tracking-widest"><Layers size={14}/> Extras Permitidos</label><div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto no-scrollbar p-1">{modifierGroups.map(group => (<div key={group.id} onClick={() => setSelectedModifiers(p => p.includes(group.id) ? p.filter(id => id !== group.id) : [...p, group.id])} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition select-none ${selectedModifiers.includes(group.id) ? 'bg-blue-900/20 border-blue-600 text-[#4A3B32]' : 'bg-[#FAF7F2] border-[#4A3B32]/10 text-[#4A3B32]/60 hover:border-[#4A3B32]/30'}`}><div className={`w-3 h-3 rounded-sm border flex items-center justify-center ${selectedModifiers.includes(group.id) ? 'bg-blue-600 border-blue-600' : 'border-[#4A3B32]/30'}`}>{selectedModifiers.includes(group.id) && <div className="w-1.5 h-1.5 bg-white rounded-sm" />}</div><span className="text-[11px] font-bold uppercase">{group.name}</span></div>))}</div></div>
+                    
+                    {/* DRAG AND DROP EXTRAS EN PRODUCT FORM */}
+                    <div className="space-y-4 pt-4 border-t border-[#4A3B32]/10">
+                        <div>
+                          <label className="text-xs font-bold text-blue-400 uppercase flex justify-between items-center gap-2 tracking-widest mb-2"><span className="flex items-center gap-1"><Layers size={14}/> Extras Permitidos</span> <span className="text-[9px] text-blue-400/60 lowercase italic">Arrastra para ordenar</span></label>
+                          <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto no-scrollbar p-1">
+                            {selectedModifiers.map((groupId, idx) => {
+                               const group = modifierGroups.find(g => g.id === groupId);
+                               if(!group) return null;
+                               return (
+                                  <div key={group.id} draggable="true" onDragStart={(e)=>handleDragStartGroup(e, idx)} onDragOver={handleDragOverGroup} onDrop={(e)=>handleDropGroup(e, idx)} onDragEnd={handleDragEndGroup} className="flex items-center justify-between gap-3 p-3 rounded-lg border cursor-grab active:cursor-grabbing transition select-none bg-blue-900/10 border-blue-500 hover:border-blue-400 hover:shadow-sm">
+                                      <div className="flex items-center gap-3">
+                                        <div className="text-blue-500/50"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg></div>
+                                        <div><span className="text-[11px] font-bold uppercase text-[#4A3B32]">{group.name}</span> <span className="text-[9px] block text-[#4A3B32]/60 uppercase">{group.min_selection===1 && group.max_selection===1 ? 'Radio':'Checkbox'}</span></div>
+                                      </div>
+                                      <button type="button" onClick={() => setSelectedModifiers(p => p.filter(id => id !== group.id))} className="text-red-500 bg-red-50 w-6 h-6 rounded-full flex items-center justify-center font-bold hover:bg-red-500 hover:text-white transition">×</button>
+                                  </div>
+                               )
+                            })}
+                            {selectedModifiers.length === 0 && <div className="text-center p-3 text-xs text-[#4A3B32]/40 italic border border-dashed rounded-lg bg-[#FAF7F2]">Ningún extra asignado.</div>}
+                          </div>
+                        </div>
+
+                        <div className="mt-2 pt-2 border-t border-[#4A3B32]/5">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-32 overflow-y-auto no-scrollbar p-1">
+                             {modifierGroups.filter(g => !selectedModifiers.includes(g.id)).map(group => (
+                                <div key={group.id} onClick={() => setSelectedModifiers(p => [...p, group.id])} className="flex flex-col p-2.5 rounded-lg border cursor-pointer transition select-none bg-[#FAF7F2] border-[#4A3B32]/10 text-[#4A3B32]/60 hover:border-[#4A3B32]/30 hover:bg-white hover:shadow-sm">
+                                   <div className="flex justify-between items-center"><span className="text-[11px] font-bold uppercase">{group.name}</span> <Plus size={14} className="opacity-50" /></div>
+                                </div>
+                             ))}
+                          </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>

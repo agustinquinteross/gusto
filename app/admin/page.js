@@ -590,7 +590,7 @@ export default function AdminPage() {
                                            {p.image_url ? 
                                                <img src={p.image_url} alt={p.name} className="w-full h-full object-cover"/> 
                                                : 
-                                               <div className="flex items-center justify-center h-full text-2xl">🍔</div>
+                                               <div className="flex items-center justify-center h-full text-2xl">🍩</div>
                                            }
                                        </div>
                                        <div className="flex flex-col justify-between overflow-hidden">
