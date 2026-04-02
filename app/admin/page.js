@@ -551,23 +551,6 @@ export default function AdminPage() {
                   <button onClick={() => printOrder(order)} className="p-1.5 bg-[#4A3B32]/5 hover:bg-[#4A3B32]/10 text-[#4A3B32]/70 hover:text-[#4A3B32] rounded transition mb-1" title="Imprimir"><Printer size={14} /></button>
                   <a href={`https://wa.me/${order.customer_phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="p-1.5 bg-green-50 hover:bg-green-100 text-green-600 rounded transition mb-1" title="Contactar WhatsApp"><MessageCircle size={14} /></a>
                 </div>
-                {reschedulingOrder?.id === order.id && (
-                    <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm rounded-xl p-3 flex flex-col items-center justify-center gap-2 border-2 border-orange-400 animate-in zoom-in-95">
-                        <p className="text-[10px] font-black uppercase text-orange-700">Nueva Fecha/Hora</p>
-                        <input 
-                            type="datetime-local" 
-                            className="text-xs border border-orange-200 rounded p-1.5 w-full outline-none focus:ring-2 focus:ring-orange-400"
-                            value={newScheduledDate}
-                            onChange={(e) => setNewScheduledDate(e.target.value)}
-                        />
-                        <div className="flex gap-1 w-full">
-                            <button onClick={() => setReschedulingOrder(null)} className="flex-1 bg-gray-100 text-gray-600 text-[10px] font-bold py-2 rounded-lg border border-gray-200">CANCELAR</button>
-                            <button onClick={handleReschedule} disabled={isUpdatingDate} className="flex-1 bg-orange-500 text-white text-[10px] font-bold py-2 rounded-lg shadow-md flex items-center justify-center gap-1">
-                                {isUpdatingDate ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} GUARDAR
-                            </button>
-                        </div>
-                    </div>
-                )}
                 <div className="flex items-center gap-1.5"><span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide ${order.delivery_method === 'delivery' ? 'bg-[#4A3B32] text-[#FAF7F2] shadow-sm' : 'bg-white text-[#4A3B32] border border-[#4A3B32]/30 shadow-sm'}`}>{order.delivery_method === 'delivery' ? 'Delivery' : 'Retiro'}</span>{order.status !== 'completed' && (<button onClick={(e) => { e.stopPropagation(); advanceOrderStatus(order) }} className={`text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-wide transition-all active:scale-95 flex items-center gap-1 ${
               order.status === 'pending' ? 'bg-red-500 text-white' :
               order.status === 'cooking' ? 'bg-blue-500 text-white' :
@@ -854,6 +837,55 @@ export default function AdminPage() {
       {showCouponModal && <AdminCouponForm couponToEdit={couponToEdit} onCancel={() => setShowCouponModal(false)} onSaved={() => { setShowCouponModal(false); fetchCoupons() }} />}
       {showBannerModal && <AdminBannerForm onCancel={() => setShowBannerModal(false)} onSaved={() => { setShowBannerModal(false); fetchBanners() }} />}
       {showOfferModal && <AdminOfferForm onCancel={() => setShowOfferModal(false)} onSaved={() => { setShowOfferModal(false); fetchOffers() }} />}
+
+      {/* MODAL GLOBAL DE REPROGRAMACIÓN */}
+      {reschedulingOrder && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+           <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-[#4A3B32]/10 animate-in zoom-in-95 duration-200">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-orange-100 p-3 rounded-2xl text-orange-600">
+                   <Calendar size={24} />
+                </div>
+                <div>
+                   <h3 className="text-lg font-black text-[#4A3B32] uppercase italic tracking-tighter">Reprogramar Pedido</h3>
+                   <p className="text-xs text-[#4A3B32]/60 font-bold uppercase tracking-widest">Pedido #{reschedulingOrder.id} - {reschedulingOrder.customer_name}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                   <label className="text-[10px] font-black uppercase text-orange-700 ml-1">Elegí la Nueva Fecha/Hora</label>
+                   <input 
+                      type="datetime-local" 
+                      className="text-sm bg-orange-50 border-2 border-orange-100 rounded-2xl p-4 w-full outline-none focus:ring-4 focus:ring-orange-200 focus:border-orange-400 transition-all font-bold text-[#4A3B32]"
+                      value={newScheduledDate}
+                      onChange={(e) => setNewScheduledDate(e.target.value)}
+                   />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                   <button 
+                      onClick={() => setReschedulingOrder(null)} 
+                      className="flex-1 bg-gray-50 text-gray-500 text-xs font-black py-4 rounded-2xl border border-gray-100 hover:bg-gray-100 transition-colors uppercase tracking-tight"
+                   >
+                      Cerrar
+                   </button>
+                   <button 
+                      onClick={handleReschedule} 
+                      disabled={isUpdatingDate} 
+                      className="flex-3 bg-orange-500 text-white text-xs font-black py-4 rounded-2xl shadow-xl shadow-orange-200 hover:bg-orange-600 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-tight"
+                   >
+                      {isUpdatingDate ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
+                      Confirmar y Notificar
+                   </button>
+                </div>
+                <p className="text-[9px] text-[#4A3B32]/40 text-center font-bold uppercase leading-tight italic">
+                  Al confirmar se guardará la nueva fecha <br/>y se abrirá el mensaje de WhatsApp.
+                </p>
+              </div>
+           </div>
+        </div>
+      )}
 
     </div>
   )

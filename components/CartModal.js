@@ -241,22 +241,22 @@ export default function CartModal({ isOpen, onClose }) {
         const savings   = getItemPromoSavings(i)
         const hasPromo  = i.special_offers && i.special_offers.is_active !== false
         const promoTag  = hasPromo ? ` 🎁 *[${i.special_offers.discount_value}]*` : ''
-        const promoLine = savings > 0 ? `%0A  └ Ahorro: -$${Math.round(savings).toLocaleString('es-AR')}` : ''
+        const promoLine = savings > 0 ? `\n  └ Ahorro: -$${Math.round(savings).toLocaleString('es-AR')}` : ''
         return `▪️ ${i.quantity}x *${i.name}*${promoTag}${extras ? ` + ${extras}` : ''}${nota}${promoLine}`
-    }).join('%0A')
+    }).join('\n')
 
     // ✅ FIX: Link de Google Maps estándar y funcional
     const mapLink = coords ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}` : ''
     
-    let msg = `Hola Gustó! ✨%0A%0ASoy *${name}*.%0APedido *%23${order.id}*%0A`
+    let msg = `Hola Gustó! ✨\n\nSoy *${name}*.\n*Pedido #${order.id}*\n`
     
     if (deliveryType === 'delivery') {
-        msg += `%0A🛵 *ENVÍO A DOMICILIO*`
-        msg += `%0A📏 Distancia: *${distanceKm.toFixed(1)} KM*` 
-        msg += `%0A📍 Dir: *${address}*`
-        if (mapLink) msg += `%0A📍 GPS: ${mapLink}%0A`
+        msg += `\n🛵 *ENVÍO A DOMICILIO*`
+        msg += `\n📏 Distancia: *${distanceKm.toFixed(1)} KM*` 
+        msg += `\n📍 Dir: *${address}*`
+        if (mapLink) msg += `\n📍 GPS: ${mapLink}\n`
     } else { 
-        msg += `%0A🏪 *RETIRO EN LOCAL*%0A` 
+        msg += `\n🏪 *RETIRO EN LOCAL*\n` 
     }
 
     if (isScheduled && scheduledDate) {
@@ -268,21 +268,20 @@ export default function CartModal({ isOpen, onClose }) {
             minute: '2-digit',
             hour12: false
         }).replace(/^\w/, (c) => c.toUpperCase());
-        msg += `%0A📅 *PEDIDO PROGRAMADO*`
-        msg += `%0A🕒 Fecha/Hora: *${formattedDate} hs*%0A`
+        msg += `\n📅 *PEDIDO PROGRAMADO*`
+        msg += `\n🕒 Fecha/Hora: *${formattedDate} hs*\n`
     }
 
-    msg += `%0A${itemsList}%0A%0A`
-    if (promoSavings > 0) msg += `🎁 Ahorro Promos: -$${promoSavings}%0A`
-    if (deliveryType === 'delivery') msg += `🛵 Costo Envío: $${deliveryCost}%0A`
-    msg += `Total a Pagar: *$${total}*%0APago: ${paymentMethod.toUpperCase()}%0A%0A`
+    msg += `\n${itemsList.replace(/%0A/g, '\n')}\n\n`
+    if (promoSavings > 0) msg += `🎁 Ahorro Promos: -$${promoSavings}\n`
+    if (deliveryType === 'delivery') msg += `🛵 Costo Envío: $${deliveryCost}\n`
+    msg += `Total a Pagar: *$${total}*\nPago: ${paymentMethod.toUpperCase()}\n\n`
 
     const trackingUrl = `${window.location.origin}/pedido/${order.id}`
-    msg += `📍 *SEGUÍ TU PEDIDO EN VIVO ACÁ:*%0A${trackingUrl}`
+    msg += `📍 *SEGUÍ TU PEDIDO EN VIVO ACÁ:*\n${trackingUrl}`
 
     // ✅ FIX: Usar encodeURIComponent y manejar bloqueador de popups
-    const cleanMsg = msg.replace(/%0A/g, '\n'); 
-    const whatsappUrl = `https://wa.me/${config.whatsapp_number}?text=${encodeURIComponent(cleanMsg)}`;
+    const whatsappUrl = `https://wa.me/${config.whatsapp_number}?text=${encodeURIComponent(msg)}`;
     
     const win = window.open(whatsappUrl, '_blank');
     if (!win) {
