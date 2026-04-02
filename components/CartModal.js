@@ -130,6 +130,9 @@ export default function CartModal({ isOpen, onClose }) {
   
   const total = Math.max(0, subtotal - discountAmount - promoSavings + deliveryCost)
 
+  const hasOutOfStockItems = cart.some(item => item.stock === 0)
+
+
   const handleSearchAddress = async (query) => {
     if (!query || query.length < 3) { setSuggestions([]); return }
     try {
@@ -204,7 +207,7 @@ export default function CartModal({ isOpen, onClose }) {
         payment_method: paymentMethod,
         discount: discountAmount + promoSavings, 
         coupon_code: couponCode || null,
-        scheduled_date: isScheduled ? scheduledDate : null
+        scheduled_date: isScheduled && scheduledDate ? new Date(scheduledDate).toISOString() : null
       }).select().single()
 
     if (error) { alert('Error al guardar: ' + error.message); setLoading(false); return }
@@ -277,7 +280,14 @@ export default function CartModal({ isOpen, onClose }) {
     const trackingUrl = `${window.location.origin}/pedido/${order.id}`
     msg += `📍 *SEGUÍ TU PEDIDO EN VIVO ACÁ:*%0A${trackingUrl}`
 
-    window.open(`https://wa.me/${config.whatsapp_number}?text=${msg}`, '_blank')
+    // ✅ FIX: Usar encodeURIComponent y manejar bloqueador de popups
+    const cleanMsg = msg.replace(/%0A/g, '\n'); 
+    const whatsappUrl = `https://wa.me/${config.whatsapp_number}?text=${encodeURIComponent(cleanMsg)}`;
+    
+    const win = window.open(whatsappUrl, '_blank');
+    if (!win) {
+        window.location.href = whatsappUrl;
+    }
     
     clearCart()
     onClose()
@@ -406,6 +416,16 @@ export default function CartModal({ isOpen, onClose }) {
                         ¿Querés programar tu pedido?
                     </span>
                 </label>
+                
+                {hasOutOfStockItems && (
+                    <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl mb-3 flex items-start gap-2 animate-in slide-in-from-top-1">
+                        <AlertCircle size={16} className="text-orange-600 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-[11px] font-black text-orange-800 uppercase tracking-tight">Programación Necesaria</p>
+                            <p className="text-[10px] text-orange-700 leading-tight">Tenés productos sin stock para hoy en tu carrito. Por favor, programá tu pedido para una fecha futura.</p>
+                        </div>
+                    </div>
+                )}
 
                 {isScheduled && (
                     <div className="animate-in fade-in slide-in-from-top-2 duration-300">
@@ -437,10 +457,12 @@ export default function CartModal({ isOpen, onClose }) {
             <div className="space-y-3">
                 <button 
                     onClick={handleCheckout} 
-                    disabled={loading || cart.length === 0 || (deliveryType === 'delivery' && !coords) || (isScheduled && !scheduledDate)} 
-                    className="w-full bg-green-600 text-[#4A3B32] py-4 rounded-xl font-black flex justify-center items-center gap-2 hover:bg-green-500 disabled:opacity-50 shadow-lg shadow-green-900/20 transition-all uppercase tracking-widest text-sm"
+                    disabled={loading || cart.length === 0 || (deliveryType === 'delivery' && !coords) || (isScheduled && !scheduledDate) || (hasOutOfStockItems && !isScheduled)} 
+                    className={`w-full py-4 rounded-xl font-black flex justify-center items-center gap-2 disabled:opacity-50 shadow-lg transition-all uppercase tracking-widest text-sm ${hasOutOfStockItems && !isScheduled ? 'bg-orange-200 text-orange-800 border border-orange-300' : 'bg-green-600 text-[#4A3B32] hover:bg-green-500 shadow-green-900/20'}`}
                 >
-                    {loading ? <Loader2 className="animate-spin"/> : <><MessageCircle size={20}/> {isScheduled ? 'Programar Pedido' : 'Enviar Pedido'}</>}
+                    {loading ? <Loader2 className="animate-spin"/> : (
+                        hasOutOfStockItems && !isScheduled ? '¡Programá tu Pedido!' : <><MessageCircle size={20}/> {isScheduled ? 'Programar Pedido' : 'Enviar Pedido'}</>
+                    )}
                 </button>
             </div>
         </div>

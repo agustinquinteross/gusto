@@ -81,6 +81,11 @@ export default function AdminPage() {
   // --- DRAG & DROP ---
   const [draggedOrder, setDraggedOrder] = useState(null)
   const [isDraggingOver, setIsDraggingOver] = useState(null)
+  
+  // --- REPROGRAMACIÓN DE PEDIDOS ---
+  const [reschedulingOrder, setReschedulingOrder] = useState(null)
+  const [newScheduledDate, setNewScheduledDate] = useState('')
+  const [isUpdatingDate, setIsUpdatingDate] = useState(false)
 
   // =========================================
   // 1. INICIALIZACIÓN
@@ -422,6 +427,91 @@ export default function AdminPage() {
   }
   const toggleOfferActive = async (id, current) => { await supabase.from('special_offers').update({ is_active: !current }).eq('id', id); fetchOffers() }
 
+  // --- LÓGICA DE REPROGRAMACIÓN ---
+  const handleReschedule = async () => {
+    if (!reschedulingOrder || !newScheduledDate) {
+        alert("Selecciona una fecha válida");
+        return;
+    }
+    
+    // newScheduledDate viene como "YYYY-MM-DDTHH:mm" (hora local del admin)
+    // El browser interpreta strings sin 'Z' como HORA LOCAL al hacer new Date()
+    const dateObj = new Date(newScheduledDate);
+    if (isNaN(dateObj.getTime())) {
+        alert("Fecha inválida");
+        return;
+    }
+
+    setIsUpdatingDate(true);
+    try {
+      // CLAVE: dateObj.toISOString() convierte la hora LOCAL a UTC correctamente.
+      // Así Supabase recibe el UTC real y al leerlo el browser lo muestra en hora local.
+      const { error } = await supabase
+        .from('orders')
+        .update({ scheduled_date: dateObj.toISOString() })
+        .eq('id', reschedulingOrder.id);
+
+      if (error) throw error;
+
+      // Generar mensaje de WhatsApp con la hora LOCAL del admin (dateObj ya está en local)
+      const formattedDate = dateObj.toLocaleString('es-AR', {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).replace(/^\w/, (c) => c.toUpperCase());
+
+      const rawMsg = `¡Hola *${reschedulingOrder.customer_name}*! 👋 Soy de *Gustó*.\n\nTe contacto para avisarte que, por una cuestión de logística, hemos tenido que reprogramar la entrega de tu pedido *#${reschedulingOrder.id}*.\n\nNueva fecha y hora de entrega:\n📅 *${formattedDate} hs*\n\n¡Muchas gracias por tu paciencia y por elegirnos! ✨`;
+      
+      let phone = reschedulingOrder.customer_phone.replace(/\D/g, '');
+      // Lógica de prefijos para Argentina
+      if (phone.length === 10) phone = '549' + phone; 
+      if (phone.length === 11 && phone.startsWith('54')) {
+          phone = '549' + phone.substring(2);
+      }
+      
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(rawMsg)}`;
+      
+      // Intentar abrir WhatsApp (el navegador puede bloquear el popup si tarda mucho el await previo)
+      const win = window.open(whatsappUrl, '_blank');
+      if (!win) {
+          // Si el bloqueador de popups lo detiene, redirigir la misma ventana
+          window.location.href = whatsappUrl;
+      }
+
+      setReschedulingOrder(null);
+      setNewScheduledDate('');
+      fetchOrders(); // Refrescar para ver el cambio en el cartel
+    } catch (error) {
+      alert("Error al reprogramar: " + error.message);
+    } finally {
+      setIsUpdatingDate(false);
+    }
+  }
+
+  // Helper para convertir fecha de DB (UTC ISO) a formato de input datetime-local (Hora Local)
+  const formatDBDateToInput = (dbDate) => {
+    if (!dbDate) return '';
+    try {
+      // new Date() parsea el UTC de Supabase y lo convierte a hora local automáticamente
+      const d = new Date(dbDate);
+      if (isNaN(d.getTime())) return '';
+      
+      // Usamos getFullYear/getMonth/etc. que son métodos LOCALES (no UTC)
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (e) {
+      return '';
+    }
+  }
+
   if (!session) return <LoginScreen email={email} setEmail={setEmail} password={password} setPassword={setPassword} handleLogin={handleLogin} loading={loading} />
 
   // --- LÓGICA DE FILTRADO PARA PRODUCTOS ---
@@ -445,14 +535,39 @@ export default function AdminPage() {
                 {order.scheduled_date && (
                     <div className="bg-orange-500 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm flex items-center gap-1 animate-pulse mb-1">
                         <Clock size={10} /> 
-                        {new Date(order.scheduled_date).toLocaleString('es-AR', { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/^\w/, (c) => c.toUpperCase())}
+                        {new Date(order.scheduled_date).toLocaleString('es-AR', { 
+                            weekday: 'long', 
+                            day: '2-digit', 
+                            month: '2-digit', 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            hour12: false 
+                        }).replace(/^\w/, (c) => c.toUpperCase())} hs
                     </div>
                 )}
                 <div className="flex gap-1">
                   <button onClick={() => deleteOrder(order.id)} className="p-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded transition mb-1" title="Eliminar"><Trash2 size={14} /></button>
+                  <button onClick={() => { setReschedulingOrder(order); setNewScheduledDate(formatDBDateToInput(order.scheduled_date)) }} className="p-1.5 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded transition mb-1" title="Reprogramar"><Calendar size={14} /></button>
                   <button onClick={() => printOrder(order)} className="p-1.5 bg-[#4A3B32]/5 hover:bg-[#4A3B32]/10 text-[#4A3B32]/70 hover:text-[#4A3B32] rounded transition mb-1" title="Imprimir"><Printer size={14} /></button>
                   <a href={`https://wa.me/${order.customer_phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="p-1.5 bg-green-50 hover:bg-green-100 text-green-600 rounded transition mb-1" title="Contactar WhatsApp"><MessageCircle size={14} /></a>
                 </div>
+                {reschedulingOrder?.id === order.id && (
+                    <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm rounded-xl p-3 flex flex-col items-center justify-center gap-2 border-2 border-orange-400 animate-in zoom-in-95">
+                        <p className="text-[10px] font-black uppercase text-orange-700">Nueva Fecha/Hora</p>
+                        <input 
+                            type="datetime-local" 
+                            className="text-xs border border-orange-200 rounded p-1.5 w-full outline-none focus:ring-2 focus:ring-orange-400"
+                            value={newScheduledDate}
+                            onChange={(e) => setNewScheduledDate(e.target.value)}
+                        />
+                        <div className="flex gap-1 w-full">
+                            <button onClick={() => setReschedulingOrder(null)} className="flex-1 bg-gray-100 text-gray-600 text-[10px] font-bold py-2 rounded-lg border border-gray-200">CANCELAR</button>
+                            <button onClick={handleReschedule} disabled={isUpdatingDate} className="flex-1 bg-orange-500 text-white text-[10px] font-bold py-2 rounded-lg shadow-md flex items-center justify-center gap-1">
+                                {isUpdatingDate ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} GUARDAR
+                            </button>
+                        </div>
+                    </div>
+                )}
                 <div className="flex items-center gap-1.5"><span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide ${order.delivery_method === 'delivery' ? 'bg-[#4A3B32] text-[#FAF7F2] shadow-sm' : 'bg-white text-[#4A3B32] border border-[#4A3B32]/30 shadow-sm'}`}>{order.delivery_method === 'delivery' ? 'Delivery' : 'Retiro'}</span>{order.status !== 'completed' && (<button onClick={(e) => { e.stopPropagation(); advanceOrderStatus(order) }} className={`text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-wide transition-all active:scale-95 flex items-center gap-1 ${
               order.status === 'pending' ? 'bg-red-500 text-white' :
               order.status === 'cooking' ? 'bg-blue-500 text-white' :

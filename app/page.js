@@ -252,7 +252,7 @@ export default function Home() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredProducts.map(product => (
-                <div key={product.id} onClick={() => product.stock !== 0 && setSelectedProduct(product)} className={`bg-white border border-[#4A3B32]/10 rounded-2xl overflow-hidden transition-all group relative ${product.stock === 0 ? 'opacity-75 cursor-not-allowed grayscale-[0.2]' : 'hover:border-[#4A3B32]/30 cursor-pointer shadow-sm hover:shadow-md'}`}>
+                <div key={product.id} onClick={() => setSelectedProduct(product)} className={`bg-white border border-[#4A3B32]/10 rounded-2xl overflow-hidden transition-all group relative cursor-pointer shadow-sm hover:shadow-md hover:border-[#4A3B32]/30 ${product.stock === 0 ? 'opacity-85 grayscale-[0.1]' : ''}`}>
 
                   {/* 🔥 CONTENEDOR DE ETIQUETAS 🔥 */}
                   <div className="absolute top-2 left-2 z-20 flex flex-col items-start gap-1.5">

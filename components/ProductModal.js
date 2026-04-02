@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { X, Check, PenLine, Minus, Plus } from 'lucide-react';
+import { X, Check, PenLine, Minus, Plus, AlertCircle } from 'lucide-react';
 
 // ✅ FIX: Helper para formatear precios sin decimales sucios.
 function formatPrice(amount) {
@@ -191,6 +191,12 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
               )}
             </div>
             <p className="text-[#4A3B32]/70 text-sm leading-relaxed">{product.description}</p>
+            {product.stock === 0 && (
+              <div className="mt-3 flex items-center gap-2 bg-orange-50 border border-orange-200 p-3 rounded-xl text-orange-700 text-xs font-bold animate-in slide-in-from-top-2">
+                <AlertCircle size={14} /> 
+                Este producto no tiene stock hoy. Solo disponible para pedidos programados.
+              </div>
+            )}
           </div>
 
           <hr className="border-[#4A3B32]/10" />
@@ -361,10 +367,9 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
             <button
               type="button"
               onClick={handleAddToOrder}
-              disabled={product.stock === 0}
-              className="flex-1 bg-[#4A3B32] hover:bg-black text-[#FAF7F2] font-black py-3 rounded-xl text-lg flex justify-between px-6 shadow-lg shadow-red-900/30 transition-all active:scale-95 border-t border-red-400 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
+              className={`flex-1 font-black py-3 rounded-xl text-lg flex justify-between px-6 shadow-lg transition-all active:scale-95 border-t ${product.stock === 0 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-400 shadow-orange-900/20' : 'bg-[#4A3B32] hover:bg-black text-[#FAF7F2] border-red-400 shadow-red-900/30'}`}
             >
-              <span>{product.stock === 0 ? 'AGOTADO' : 'AGREGAR'}</span>
+              <span>{product.stock === 0 ? 'AGREGAR PARA PROGRAMAR' : 'AGREGAR'}</span>
               <span>${totalDisplay}</span>
             </button>
           </div>
